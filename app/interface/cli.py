@@ -1,20 +1,28 @@
 import sqlite3
 import sys
 from datetime import date
-from typing import List, TypeVar
+from typing import List, Optional, TypeVar
 
+from app.analytics.orcamento_analytics import calcular_consumo_orcamento
 from app.database.connection import get_connection, init_db
 from app.database.seed import seed_dados_iniciais
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
-from app.repositories.movimentacao_repository import MovimentacaoRepository
+from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
 from app.services.exceptions import ErroValidacao
 from app.services.movimentacao_service import MovimentacaoService
+from app.services.orcamento_service import OrcamentoService
 from app.services.sugestao_categoria import sugerir_categoria
 from app.utils.money import formatar_moeda, reais_para_centavos
 
 T = TypeVar("T")
+
+ROTULOS_SITUACAO = {
+    "dentro": "dentro do limite",
+    "proximo": "próximo do limite",
+    "ultrapassado": "limite ultrapassado",
+}
 
 
 def _escolher(opcoes: List[T], rotulo_attr: str = "nome") -> T:
@@ -25,6 +33,19 @@ def _escolher(opcoes: List[T], rotulo_attr: str = "nome") -> T:
         if escolha.isdigit() and 1 <= int(escolha) <= len(opcoes):
             return opcoes[int(escolha) - 1]
         print("Opção inválida, tente novamente.")
+
+
+def _perguntar_opcional(rotulo: str) -> Optional[str]:
+    valor = input(f"{rotulo} (Enter para pular): ").strip()
+    return valor or None
+
+
+def _imprimir_movimentacoes(conn: sqlite3.Connection, movimentacoes: list) -> None:
+    categorias = {c.id: c.nome for c in CategoriaRepository(conn).list(apenas_ativas=False)}
+    for mov in movimentacoes:
+        sinal = "+" if mov.tipo == "entrada" else "-"
+        categoria_nome = categorias.get(mov.categoria_id, "?")
+        print(f"{mov.data} | {sinal}{formatar_moeda(mov.valor)} | {categoria_nome} | {mov.status} | {mov.descricao}")
 
 
 def novo_lancamento(conn: sqlite3.Connection) -> None:
@@ -98,11 +119,100 @@ def listar_movimentacoes(conn: sqlite3.Connection) -> None:
     if not movimentacoes:
         print("Nenhuma movimentação registrada.")
         return
-    categorias = {c.id: c.nome for c in CategoriaRepository(conn).list(apenas_ativas=False)}
-    for mov in movimentacoes:
-        sinal = "+" if mov.tipo == "entrada" else "-"
-        categoria_nome = categorias.get(mov.categoria_id, "?")
-        print(f"{mov.data} | {sinal}{formatar_moeda(mov.valor)} | {categoria_nome} | {mov.descricao}")
+    _imprimir_movimentacoes(conn, movimentacoes)
+
+
+def historico_com_filtros(conn: sqlite3.Connection) -> None:
+    data_inicio = _perguntar_opcional("Data início (AAAA-MM-DD)")
+    data_fim = _perguntar_opcional("Data fim (AAAA-MM-DD)")
+
+    tipo = _perguntar_opcional("Tipo (entrada/saida)")
+    while tipo not in (None, "entrada", "saida"):
+        print("Tipo inválido.")
+        tipo = _perguntar_opcional("Tipo (entrada/saida)")
+
+    categoria_id = None
+    categorias = CategoriaRepository(conn).list(tipo=tipo, apenas_ativas=False)
+    if categorias and input("Filtrar por categoria? [s/N]: ").strip().lower() == "s":
+        categoria_id = _escolher(categorias).id
+
+    conta_id = None
+    contas = ContaRepository(conn).list()
+    if contas and input("Filtrar por conta? [s/N]: ").strip().lower() == "s":
+        conta_id = _escolher(contas).id
+
+    forma_pagamento_id = None
+    formas_pagamento = FormaPagamentoRepository(conn).list()
+    if formas_pagamento and input("Filtrar por forma de pagamento? [s/N]: ").strip().lower() == "s":
+        forma_pagamento_id = _escolher(formas_pagamento).id
+
+    status = _perguntar_opcional("Status (pago/pendente)")
+    while status not in (None, "pago", "pendente"):
+        print("Status inválido.")
+        status = _perguntar_opcional("Status (pago/pendente)")
+
+    busca_texto = _perguntar_opcional("Buscar por texto na descrição")
+
+    filtro = FiltroMovimentacao(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        categoria_id=categoria_id,
+        tipo=tipo,
+        forma_pagamento_id=forma_pagamento_id,
+        conta_id=conta_id,
+        status=status,
+        busca_texto=busca_texto,
+    )
+
+    movimentacoes = MovimentacaoRepository(conn).list(filtro)
+    if not movimentacoes:
+        print("Nenhuma movimentação encontrada com esses filtros.")
+        return
+    _imprimir_movimentacoes(conn, movimentacoes)
+
+
+def definir_orcamento(conn: sqlite3.Connection) -> None:
+    categorias = CategoriaRepository(conn).list(tipo="saida")
+    if not categorias:
+        print("Nenhuma categoria de saída cadastrada.")
+        return
+    print("Categoria:")
+    categoria = _escolher(categorias)
+
+    hoje = date.today()
+    mes_texto = input(f"Mês [1-12] (Enter para {hoje.month}): ").strip()
+    mes = int(mes_texto) if mes_texto else hoje.month
+    ano_texto = input(f"Ano (Enter para {hoje.year}): ").strip()
+    ano = int(ano_texto) if ano_texto else hoje.year
+
+    limite_texto = input("Limite mensal (ex: 500,00): ").strip()
+    try:
+        limite = reais_para_centavos(limite_texto)
+    except ValueError as exc:
+        print(f"Valor inválido: {exc}")
+        return
+
+    try:
+        OrcamentoService(conn).definir_limite(categoria.id, mes, ano, limite)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Orçamento de {categoria.nome} para {mes:02d}/{ano} definido em {formatar_moeda(limite)}.")
+
+
+def ver_orcamento_do_mes(conn: sqlite3.Connection) -> None:
+    hoje = date.today()
+    consumo = calcular_consumo_orcamento(conn, hoje.month, hoje.year)
+    if not consumo:
+        print("Nenhum orçamento definido para este mês.")
+        return
+
+    for item in consumo:
+        print(
+            f"{item.categoria_nome}: {formatar_moeda(item.gasto)} de {formatar_moeda(item.limite)} "
+            f"({item.percentual:.0f}%) — {ROTULOS_SITUACAO[item.situacao]}"
+        )
 
 
 def resumo_do_mes(conn: sqlite3.Connection) -> None:
@@ -127,7 +237,10 @@ def main() -> None:
     menu = {
         "1": ("Novo lançamento", novo_lancamento),
         "2": ("Listar movimentações", listar_movimentacoes),
-        "3": ("Resumo do mês", resumo_do_mes),
+        "3": ("Histórico com filtros", historico_com_filtros),
+        "4": ("Resumo do mês", resumo_do_mes),
+        "5": ("Definir orçamento", definir_orcamento),
+        "6": ("Ver orçamento do mês", ver_orcamento_do_mes),
     }
 
     try:

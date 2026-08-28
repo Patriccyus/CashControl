@@ -24,6 +24,7 @@ pytest              # roda os testes
 
 ## Status
 
-Fase 1 (planejamento), Fase 2 (banco de dados) e Fase 3 (cadastro: services
-e CLI de lançamento rápido) concluídas. Próxima etapa: Fase 4 — consultas
-(histórico com filtros) e Fase 5 — orçamento.
+Fase 1 (planejamento), Fase 2 (banco de dados), Fase 3 (cadastro), Fase 4
+(consultas: histórico com filtros) e Fase 5 (orçamento: limites por
+categoria e alerta de consumo) concluídas. Próxima etapa: Fase 6 —
+dashboard com indicadores e gráficos (interface gráfica em PySide6).

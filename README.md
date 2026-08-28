@@ -8,8 +8,9 @@ para a especificação completa.
 
 ```bash
 pip install -r requirements.txt
-python main.py     # cria o banco SQLite em data/controle_financeiro.db
-pytest              # roda os testes
+python main.py       # abre a interface gráfica (PySide6)
+python main.py --cli # interface de linha de comando (alternativa)
+pytest                # roda os testes
 ```
 
 ## Estrutura
@@ -17,14 +18,16 @@ pytest              # roda os testes
 - `app/database` — conexão, schema e seed do SQLite
 - `app/models` — dataclasses das entidades
 - `app/repositories` — acesso e persistência dos dados
-- `app/services` — regras de negócio (em construção)
-- `app/analytics` — indicadores e insights (em construção)
+- `app/services` — regras de negócio (validação, sugestão de categoria, orçamento)
+- `app/analytics` — indicadores do dashboard e consumo de orçamento
 - `app/reports` — geração de relatórios (em construção)
-- `app/interface` — interface gráfica (em construção)
+- `app/interface/cli.py` — interface de linha de comando
+- `app/interface/gui` — interface gráfica em PySide6 (dashboard, lançamento, histórico, orçamento)
 
 ## Status
 
 Fase 1 (planejamento), Fase 2 (banco de dados), Fase 3 (cadastro), Fase 4
-(consultas: histórico com filtros) e Fase 5 (orçamento: limites por
-categoria e alerta de consumo) concluídas. Próxima etapa: Fase 6 —
-dashboard com indicadores e gráficos (interface gráfica em PySide6).
+(consultas: histórico com filtros), Fase 5 (orçamento) e Fase 6 (dashboard
+gráfico em PySide6, com indicadores e gráficos de entradas/saídas, gastos
+por categoria e orçamento) concluídas. Próxima etapa: Fase 7 — relatório
+mensal em PDF.

@@ -6,6 +6,7 @@ from app.interface.gui.dashboard_page import DashboardPage
 from app.interface.gui.historico_page import HistoricoPage
 from app.interface.gui.lancamento_page import LancamentoPage
 from app.interface.gui.orcamento_page import OrcamentoPage
+from app.interface.gui.relatorio_page import RelatorioPage
 
 
 class MainWindow(QMainWindow):
@@ -20,7 +21,7 @@ class MainWindow(QMainWindow):
 
         self.menu_lateral = QListWidget()
         self.menu_lateral.setFixedWidth(180)
-        self.menu_lateral.addItems(["Dashboard", "Novo lançamento", "Histórico", "Orçamento"])
+        self.menu_lateral.addItems(["Dashboard", "Novo lançamento", "Histórico", "Orçamento", "Relatório"])
         self.menu_lateral.currentRowChanged.connect(self._trocar_pagina)
         layout.addWidget(self.menu_lateral)
 
@@ -29,12 +30,14 @@ class MainWindow(QMainWindow):
         self.pagina_lancamento = LancamentoPage(conn, ao_salvar=self._apos_novo_lancamento)
         self.pagina_historico = HistoricoPage(conn)
         self.pagina_orcamento = OrcamentoPage(conn)
+        self.pagina_relatorio = RelatorioPage(conn)
 
         for pagina in (
             self.pagina_dashboard,
             self.pagina_lancamento,
             self.pagina_historico,
             self.pagina_orcamento,
+            self.pagina_relatorio,
         ):
             self.paginas.addWidget(pagina)
 

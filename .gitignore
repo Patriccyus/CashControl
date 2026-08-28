@@ -5,3 +5,4 @@ venv/
 .venv/
 data/*.db
 data/*.db-journal
+reports/*.pdf

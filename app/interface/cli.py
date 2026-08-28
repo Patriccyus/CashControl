@@ -1,15 +1,18 @@
 import sqlite3
 import sys
 from datetime import date
+from pathlib import Path
 from typing import List, Optional, TypeVar
 
 from app.analytics.orcamento_analytics import calcular_consumo_orcamento
+from app.analytics.relatorio_mensal import gerar_relatorio_mensal
 from app.database.connection import get_connection, init_db
 from app.database.seed import seed_dados_iniciais
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
+from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
 from app.services.exceptions import ErroValidacao
 from app.services.movimentacao_service import MovimentacaoService
 from app.services.orcamento_service import OrcamentoService
@@ -18,11 +21,29 @@ from app.utils.money import formatar_moeda, reais_para_centavos
 
 T = TypeVar("T")
 
+PASTA_RELATORIOS = Path(__file__).resolve().parents[2] / "reports"
+
 ROTULOS_SITUACAO = {
     "dentro": "dentro do limite",
     "proximo": "próximo do limite",
     "ultrapassado": "limite ultrapassado",
 }
+
+NOMES_MESES = [
+    "",
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+]
 
 
 def _escolher(opcoes: List[T], rotulo_attr: str = "nome") -> T:
@@ -225,6 +246,42 @@ def resumo_do_mes(conn: sqlite3.Connection) -> None:
     print(f"Resultado:       {formatar_moeda(entradas - saidas)}")
 
 
+def gerar_relatorio_do_mes(conn: sqlite3.Connection) -> None:
+    hoje = date.today()
+    mes_texto = input(f"Mês [1-12] (Enter para {hoje.month}): ").strip()
+    mes = int(mes_texto) if mes_texto else hoje.month
+    ano_texto = input(f"Ano (Enter para {hoje.year}): ").strip()
+    ano = int(ano_texto) if ano_texto else hoje.year
+
+    relatorio = gerar_relatorio_mensal(conn, mes, ano)
+    resumo = relatorio.resumo
+
+    print(f"\n=== Relatório de {NOMES_MESES[mes]}/{ano} ===")
+    print(f"Entradas: {formatar_moeda(resumo.total_entradas)}")
+    print(f"Saídas:   {formatar_moeda(resumo.total_saidas)}")
+    print(f"Resultado: {formatar_moeda(resumo.resultado)}")
+    print(f"Taxa de economia: {resumo.taxa_economia:.1f}%")
+    if resumo.maior_categoria_gasto.nome:
+        print(
+            f"Maior categoria de gasto: {resumo.maior_categoria_gasto.nome} "
+            f"({formatar_moeda(resumo.maior_categoria_gasto.valor)})"
+        )
+    if resumo.maior_despesa_individual.descricao:
+        print(
+            f"Maior despesa individual: {resumo.maior_despesa_individual.descricao} "
+            f"({formatar_moeda(resumo.maior_despesa_individual.valor)})"
+        )
+
+    if relatorio.insights:
+        print("\nInsights:")
+        for texto in relatorio.insights:
+            print(f"  • {texto}")
+
+    caminho = PASTA_RELATORIOS / f"relatorio_{ano:04d}_{mes:02d}.pdf"
+    gerar_pdf_relatorio_mensal(relatorio, caminho)
+    print(f"\nPDF salvo em {caminho}")
+
+
 def main() -> None:
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -241,6 +298,7 @@ def main() -> None:
         "4": ("Resumo do mês", resumo_do_mes),
         "5": ("Definir orçamento", definir_orcamento),
         "6": ("Ver orçamento do mês", ver_orcamento_do_mes),
+        "7": ("Gerar relatório do mês (PDF)", gerar_relatorio_do_mes),
     }
 
     try:

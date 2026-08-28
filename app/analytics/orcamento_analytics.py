@@ -1,11 +1,11 @@
 import sqlite3
 from dataclasses import dataclass
-from datetime import date, timedelta
 from typing import List
 
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
 from app.repositories.orcamento_repository import OrcamentoRepository
+from app.utils.datas import ultimo_dia_do_mes
 
 LIMIAR_PROXIMO = 80.0
 
@@ -30,7 +30,7 @@ def calcular_consumo_orcamento(conn: sqlite3.Connection, mes: int, ano: int) -> 
     movimentacao_repo = MovimentacaoRepository(conn)
 
     data_inicio = f"{ano:04d}-{mes:02d}-01"
-    data_fim = f"{ano:04d}-{mes:02d}-{_ultimo_dia_do_mes(mes, ano):02d}"
+    data_fim = f"{ano:04d}-{mes:02d}-{ultimo_dia_do_mes(mes, ano):02d}"
 
     resultado = []
     for orcamento in orcamentos:
@@ -68,11 +68,3 @@ def calcular_consumo_orcamento(conn: sqlite3.Connection, mes: int, ano: int) -> 
         )
 
     return resultado
-
-
-def _ultimo_dia_do_mes(mes: int, ano: int) -> int:
-    if mes == 12:
-        proximo_ano, proximo_mes = ano + 1, 1
-    else:
-        proximo_ano, proximo_mes = ano, mes + 1
-    return (date(proximo_ano, proximo_mes, 1) - timedelta(days=1)).day

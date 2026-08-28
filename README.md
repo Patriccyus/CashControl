@@ -24,5 +24,6 @@ pytest              # roda os testes
 
 ## Status
 
-Fase 1 (planejamento) e Fase 2 (banco de dados) concluídas. Próxima etapa:
-Fase 3 — cadastro (services + interface de lançamento).
+Fase 1 (planejamento), Fase 2 (banco de dados) e Fase 3 (cadastro: services
+e CLI de lançamento rápido) concluídas. Próxima etapa: Fase 4 — consultas
+(histórico com filtros) e Fase 5 — orçamento.

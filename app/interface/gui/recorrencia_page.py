@@ -16,8 +16,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.interface.gui.combos import preencher_combo_contas
 from app.repositories.categoria_repository import CategoriaRepository
-from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.services.exceptions import ErroValidacao
 from app.services.recorrencia_service import FREQUENCIAS_VALIDAS, RecorrenciaService
@@ -56,8 +56,7 @@ class RecorrenciaPage(QWidget):
         formulario.addWidget(self.combo_categoria, 1, 2)
 
         self.combo_conta = QComboBox()
-        for conta in ContaRepository(conn).list():
-            self.combo_conta.addItem(conta.nome, conta.id)
+        preencher_combo_contas(self.combo_conta, conn)
         formulario.addWidget(QLabel("Conta"), 0, 3)
         formulario.addWidget(self.combo_conta, 1, 3)
 
@@ -148,6 +147,8 @@ class RecorrenciaPage(QWidget):
         self.atualizar()
 
     def atualizar(self) -> None:
+        preencher_combo_contas(self.combo_conta, self.conn)
+
         recorrencias = RecorrenciaService(self.conn).listar()
         categorias = {c.id: c.nome for c in CategoriaRepository(self.conn).list(apenas_ativas=False)}
 

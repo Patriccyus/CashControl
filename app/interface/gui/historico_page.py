@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.interface.gui.combos import preencher_combo_contas
 from app.repositories.categoria_repository import CategoriaRepository
-from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
 from app.utils.money import formatar_moeda
@@ -57,9 +57,7 @@ class HistoricoPage(QWidget):
         filtros_layout.addWidget(self.combo_categoria)
 
         self.combo_conta = QComboBox()
-        self.combo_conta.addItem("Todas as contas", None)
-        for conta in ContaRepository(conn).list(apenas_ativas=False):
-            self.combo_conta.addItem(conta.nome, conta.id)
+        preencher_combo_contas(self.combo_conta, conn, incluir_todas=True, apenas_ativas=False)
         filtros_layout.addWidget(self.combo_conta)
 
         self.combo_forma_pagamento = QComboBox()
@@ -117,6 +115,8 @@ class HistoricoPage(QWidget):
         self.atualizar()
 
     def atualizar(self) -> None:
+        preencher_combo_contas(self.combo_conta, self.conn, incluir_todas=True, apenas_ativas=False)
+
         filtro = FiltroMovimentacao(
             data_inicio=self.campo_data_inicio.text().strip() or None,
             data_fim=self.campo_data_fim.text().strip() or None,

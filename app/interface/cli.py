@@ -16,6 +16,8 @@ from app.repositories.movimentacao_repository import FiltroMovimentacao, Movimen
 from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
 from app.services.cartao_service import CartaoService
 from app.services.compra_cartao_service import CompraCartaoService
+from app.services.conta_service import TIPOS_VALIDOS as TIPOS_CONTA_VALIDOS
+from app.services.conta_service import ContaService
 from app.services.exceptions import ErroValidacao
 from app.services.fatura_cartao_service import FaturaCartaoService
 from app.services.movimentacao_service import MovimentacaoService
@@ -491,6 +493,44 @@ def pagar_fatura_cartao(conn: sqlite3.Connection) -> None:
     print(f"Fatura {mes:02d}/{ano} do cartão {cartao.nome} paga.")
 
 
+def nova_conta(conn: sqlite3.Connection) -> None:
+    nome = input("Nome da conta (ex: Banco Bradesco): ").strip()
+
+    print("Tipo:")
+    tipos = sorted(TIPOS_CONTA_VALIDOS)
+    for indice, tipo in enumerate(tipos, start=1):
+        print(f"  {indice}. {tipo}")
+    escolha = input("Escolha o número: ").strip()
+    if not escolha.isdigit() or not (1 <= int(escolha) <= len(tipos)):
+        print("Opção inválida.")
+        return
+    tipo = tipos[int(escolha) - 1]
+
+    saldo_texto = input("Saldo inicial (Enter para 0,00): ").strip() or "0"
+    try:
+        saldo_inicial = reais_para_centavos(saldo_texto)
+    except ValueError as exc:
+        print(f"Valor inválido: {exc}")
+        return
+
+    try:
+        ContaService(conn).criar(nome=nome, tipo=tipo, saldo_inicial=saldo_inicial)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Conta '{nome}' cadastrada.")
+
+
+def listar_contas(conn: sqlite3.Connection) -> None:
+    contas = ContaRepository(conn).list()
+    if not contas:
+        print("Nenhuma conta cadastrada.")
+        return
+    for conta in contas:
+        print(f"#{conta.id} {conta.nome} | {conta.tipo} | saldo inicial: {formatar_moeda(conta.saldo_inicial)}")
+
+
 def main() -> None:
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -518,6 +558,8 @@ def main() -> None:
         "11": ("Registrar compra no cartão", registrar_compra_cartao),
         "12": ("Ver faturas do cartão", ver_faturas_cartao),
         "13": ("Pagar fatura do cartão", pagar_fatura_cartao),
+        "14": ("Nova conta", nova_conta),
+        "15": ("Listar contas", listar_contas),
     }
 
     try:

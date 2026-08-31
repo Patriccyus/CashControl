@@ -16,9 +16,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.interface.gui.combos import preencher_combo_contas
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.compra_cartao_repository import CompraCartaoRepository
-from app.repositories.conta_repository import ContaRepository
 from app.repositories.fatura_paga_repository import FaturaPagaRepository
 from app.services.cartao_service import CartaoService
 from app.services.compra_cartao_service import CompraCartaoService
@@ -94,8 +94,7 @@ class CartaoPage(QWidget):
         form.addWidget(self.spin_dia_vencimento, 1, 3)
 
         self.combo_conta_cartao = QComboBox()
-        for conta in ContaRepository(self.conn).list():
-            self.combo_conta_cartao.addItem(conta.nome, conta.id)
+        preencher_combo_contas(self.combo_conta_cartao, self.conn)
         form.addWidget(QLabel("Conta de pagamento"), 0, 4)
         form.addWidget(self.combo_conta_cartao, 1, 4)
 
@@ -238,6 +237,7 @@ class CartaoPage(QWidget):
         self._atualizar_faturas()
 
     def atualizar(self) -> None:
+        preencher_combo_contas(self.combo_conta_cartao, self.conn)
         self._recarregar_combo_cartoes()
         self._atualizar_faturas()
 

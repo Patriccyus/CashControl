@@ -22,7 +22,7 @@ pytest                # roda os testes
 - `app/analytics` — indicadores do dashboard, consumo de orçamento, insights e relatório mensal
 - `app/reports` — geração do relatório mensal em PDF
 - `app/interface/cli.py` — interface de linha de comando
-- `app/interface/gui` — interface gráfica em PySide6 (dashboard, lançamento, histórico, orçamento, relatório, recorrências, cartão de crédito)
+- `app/interface/gui` — interface gráfica em PySide6 (dashboard, lançamento, histórico, orçamento, relatório, recorrências, cartão de crédito, contas)
 
 ## Status
 
@@ -33,4 +33,7 @@ regras determinísticas), Fase 8 (despesas e receitas recorrentes, com
 geração automática de lançamentos pendentes ao abrir o app) e Fase 9
 (cartão de crédito: compras parceladas, faturas por fechamento/vencimento,
 pagamento gerando movimentação, projeção de despesas futuras) concluídas.
-Próxima etapa: Fase 10 — empacotamento e instalador Windows.
+Também foi adicionada uma tela de cadastro de contas (banco, poupança,
+carteira digital etc.), que já existia como serviço desde a Fase 3 mas
+não tinha interface própria. Próxima etapa: Fase 10 — empacotamento e
+instalador Windows.

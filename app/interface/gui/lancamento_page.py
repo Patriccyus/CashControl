@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.interface.gui.combos import preencher_combo_contas
 from app.repositories.categoria_repository import CategoriaRepository
-from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.services.exceptions import ErroValidacao
 from app.services.movimentacao_service import MovimentacaoService
@@ -58,8 +58,7 @@ class LancamentoPage(QWidget):
         formulario.addRow("Categoria", self.combo_categoria)
 
         self.combo_conta = QComboBox()
-        for conta in ContaRepository(conn).list():
-            self.combo_conta.addItem(conta.nome, conta.id)
+        preencher_combo_contas(self.combo_conta, conn)
         formulario.addRow("Conta", self.combo_conta)
 
         self.combo_forma_pagamento = QComboBox()
@@ -79,6 +78,9 @@ class LancamentoPage(QWidget):
         layout.addStretch()
 
         self._recarregar_categorias()
+
+    def atualizar(self) -> None:
+        preencher_combo_contas(self.combo_conta, self.conn)
 
     def _recarregar_categorias(self) -> None:
         tipo = self.combo_tipo.currentData()

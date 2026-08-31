@@ -1,22 +1,38 @@
 import sys
 
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 
 from app.database.connection import get_connection, init_db
+from app.database.perfis_connection import get_perfis_connection
 from app.database.seed import seed_dados_iniciais
+from app.interface.gui.login_window import LoginWindow
 from app.interface.gui.main_window import MainWindow
+from app.services.perfil_service import PerfilService
 from app.services.recorrencia_service import RecorrenciaService
 
 
 def main() -> None:
-    init_db()
-    conn = get_connection()
+    app = QApplication(sys.argv)
+
+    conexao_perfis = get_perfis_connection()
+    perfil_service = PerfilService(conexao_perfis)
+
+    login = LoginWindow(perfil_service)
+    if login.exec() != QDialog.DialogCode.Accepted:
+        conexao_perfis.close()
+        sys.exit(0)
+
+    conexao_perfis.close()
+
+    caminho_banco = login.caminho_banco
+    init_db(caminho_banco)
+    conn = get_connection(caminho_banco)
     seed_dados_iniciais(conn)
 
     total_gerado = RecorrenciaService(conn).gerar_lancamentos_pendentes()
 
-    app = QApplication(sys.argv)
     janela = MainWindow(conn)
+    janela.setWindowTitle(f"Controle Financeiro — {login.perfil_autenticado.nome}")
     janela.show()
 
     if total_gerado:

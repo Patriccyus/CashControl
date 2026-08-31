@@ -8,6 +8,7 @@ from app.analytics.fatura_cartao import total_despesas_futuras_cartoes
 from app.analytics.orcamento_analytics import calcular_consumo_orcamento
 from app.analytics.relatorio_mensal import gerar_relatorio_mensal
 from app.database.connection import get_connection, init_db
+from app.database.perfis_connection import get_perfis_connection
 from app.database.seed import seed_dados_iniciais
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.conta_repository import ContaRepository
@@ -22,6 +23,7 @@ from app.services.exceptions import ErroValidacao
 from app.services.fatura_cartao_service import FaturaCartaoService
 from app.services.movimentacao_service import MovimentacaoService
 from app.services.orcamento_service import OrcamentoService
+from app.services.perfil_service import DB_LEGADO_PADRAO, PERFIS_DIR_PADRAO, PerfilService
 from app.services.recorrencia_service import FREQUENCIAS_VALIDAS, RecorrenciaService
 from app.services.sugestao_categoria import sugerir_categoria
 from app.utils.money import formatar_moeda, reais_para_centavos
@@ -613,14 +615,62 @@ def listar_contas(conn: sqlite3.Connection) -> None:
         print(f"#{conta.id} {conta.nome} | {conta.tipo} | saldo inicial: {formatar_moeda(conta.saldo_inicial)}")
 
 
+def _login_cli(
+    perfis_conn: sqlite3.Connection,
+    perfis_dir: Path = PERFIS_DIR_PADRAO,
+    legado_db_path: Path = DB_LEGADO_PADRAO,
+) -> tuple:
+    perfil_service = PerfilService(perfis_conn, perfis_dir=perfis_dir, legado_db_path=legado_db_path)
+
+    while True:
+        perfis = perfil_service.listar_perfis()
+        print("\n=== Quem é você? ===")
+        for indice, perfil in enumerate(perfis, start=1):
+            print(f"  {indice}. {perfil.nome}")
+        print("  N. Criar novo perfil")
+        escolha = input("Escolha o número ou 'N': ").strip()
+
+        if escolha.upper() == "N":
+            nome = input("Nome do novo perfil: ").strip()
+            senha = input("Senha: ").strip()
+            confirmar = input("Confirmar senha: ").strip()
+            if senha != confirmar:
+                print("As senhas não coincidem.")
+                continue
+            try:
+                perfil = perfil_service.criar_perfil(nome, senha)
+            except ErroValidacao as exc:
+                print(f"Erro: {exc}")
+                continue
+            return perfil, perfil_service.caminho_banco_do_perfil(perfil.nome)
+
+        if escolha.isdigit() and 1 <= int(escolha) <= len(perfis):
+            perfil_escolhido = perfis[int(escolha) - 1]
+            senha = input("Senha: ").strip()
+            try:
+                perfil = perfil_service.autenticar(perfil_escolhido.nome, senha)
+            except ErroValidacao as exc:
+                print(f"Erro: {exc}")
+                continue
+            return perfil, perfil_service.caminho_banco_do_perfil(perfil.nome)
+
+        print("Opção inválida.")
+
+
 def main() -> None:
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stdin.reconfigure(encoding="utf-8")
 
-    init_db()
-    conn = get_connection()
+    perfis_conn = get_perfis_connection()
+    perfil, caminho_banco = _login_cli(perfis_conn)
+    perfis_conn.close()
+
+    init_db(caminho_banco)
+    conn = get_connection(caminho_banco)
     seed_dados_iniciais(conn)
+
+    print(f"\nBem-vindo(a), {perfil.nome}!")
 
     total_gerado = RecorrenciaService(conn).gerar_lancamentos_pendentes()
     if total_gerado:

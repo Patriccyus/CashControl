@@ -17,6 +17,7 @@ CATEGORIAS_PADRAO = [
     ("Compras", "saida"),
     ("Serviços", "saida"),
     ("Impostos", "saida"),
+    ("Cartão de crédito", "saida"),
     ("Outros", "saida"),
 ]
 

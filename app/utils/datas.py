@@ -14,6 +14,10 @@ def mes_anterior(mes: int, ano: int) -> Tuple[int, int]:
     return (12, ano - 1) if mes == 1 else (mes - 1, ano)
 
 
+def mes_seguinte(mes: int, ano: int) -> Tuple[int, int]:
+    return (1, ano + 1) if mes == 12 else (mes + 1, ano)
+
+
 def meses_anteriores(mes: int, ano: int, quantidade: int) -> List[Tuple[int, int]]:
     resultado = []
     mes_atual, ano_atual = mes, ano

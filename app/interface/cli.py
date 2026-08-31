@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional, TypeVar
 
+from app.analytics.fatura_cartao import total_despesas_futuras_cartoes
 from app.analytics.orcamento_analytics import calcular_consumo_orcamento
 from app.analytics.relatorio_mensal import gerar_relatorio_mensal
 from app.database.connection import get_connection, init_db
@@ -13,7 +14,10 @@ from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
 from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
+from app.services.cartao_service import CartaoService
+from app.services.compra_cartao_service import CompraCartaoService
 from app.services.exceptions import ErroValidacao
+from app.services.fatura_cartao_service import FaturaCartaoService
 from app.services.movimentacao_service import MovimentacaoService
 from app.services.orcamento_service import OrcamentoService
 from app.services.recorrencia_service import FREQUENCIAS_VALIDAS, RecorrenciaService
@@ -28,6 +32,12 @@ ROTULOS_SITUACAO = {
     "dentro": "dentro do limite",
     "proximo": "próximo do limite",
     "ultrapassado": "limite ultrapassado",
+}
+
+ROTULOS_STATUS_FATURA = {
+    "aberta": "aberta",
+    "fechada": "fechada (aguardando pagamento)",
+    "paga": "paga",
 }
 
 NOMES_MESES = [
@@ -245,6 +255,7 @@ def resumo_do_mes(conn: sqlite3.Connection) -> None:
     print(f"Entradas do mês: {formatar_moeda(entradas)}")
     print(f"Saídas do mês:   {formatar_moeda(saidas)}")
     print(f"Resultado:       {formatar_moeda(entradas - saidas)}")
+    print(f"Despesas futuras (cartão): {formatar_moeda(total_despesas_futuras_cartoes(conn))}")
 
 
 def gerar_relatorio_do_mes(conn: sqlite3.Connection) -> None:
@@ -355,6 +366,131 @@ def listar_recorrencias(conn: sqlite3.Connection) -> None:
         )
 
 
+def novo_cartao(conn: sqlite3.Connection) -> None:
+    contas = ContaRepository(conn).list()
+    if not contas:
+        print("Nenhuma conta cadastrada.")
+        return
+    print("Conta de pagamento:")
+    conta = _escolher(contas)
+
+    nome = input("Nome do cartão: ").strip()
+    limite_texto = input("Limite (ex: 5000,00): ").strip()
+    try:
+        limite = reais_para_centavos(limite_texto)
+    except ValueError as exc:
+        print(f"Valor inválido: {exc}")
+        return
+
+    dia_fechamento_texto = input("Dia de fechamento (1-28): ").strip()
+    dia_vencimento_texto = input("Dia de vencimento (1-28): ").strip()
+    try:
+        dia_fechamento = int(dia_fechamento_texto)
+        dia_vencimento = int(dia_vencimento_texto)
+    except ValueError:
+        print("Dia inválido.")
+        return
+
+    try:
+        CartaoService(conn).criar(nome, limite, dia_fechamento, dia_vencimento, conta.id)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Cartão '{nome}' cadastrado.")
+
+
+def registrar_compra_cartao(conn: sqlite3.Connection) -> None:
+    cartoes = CartaoService(conn).listar()
+    if not cartoes:
+        print("Nenhum cartão cadastrado.")
+        return
+    print("Cartão:")
+    cartao = _escolher(cartoes)
+
+    categorias = CategoriaRepository(conn).list(tipo="saida")
+    if not categorias:
+        print("Nenhuma categoria de saída cadastrada.")
+        return
+    print("Categoria:")
+    categoria = _escolher(categorias)
+
+    descricao = input("Descrição: ").strip()
+    valor_texto = input("Valor total (ex: 3000,00): ").strip()
+    try:
+        valor_total = reais_para_centavos(valor_texto)
+    except ValueError as exc:
+        print(f"Valor inválido: {exc}")
+        return
+
+    data_compra = input(f"Data da compra (Enter para {date.today().isoformat()}): ").strip()
+    data_compra = data_compra or date.today().isoformat()
+
+    parcelas_texto = input("Número de parcelas (Enter para 1): ").strip()
+    numero_parcelas = int(parcelas_texto) if parcelas_texto else 1
+
+    try:
+        CompraCartaoService(conn).registrar_compra(
+            cartao_id=cartao.id,
+            categoria_id=categoria.id,
+            descricao=descricao,
+            data_compra=data_compra,
+            valor_total=valor_total,
+            numero_parcelas=numero_parcelas,
+        )
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Compra '{descricao}' registrada em {numero_parcelas}x no cartão {cartao.nome}.")
+
+
+def ver_faturas_cartao(conn: sqlite3.Connection) -> None:
+    cartoes = CartaoService(conn).listar()
+    if not cartoes:
+        print("Nenhum cartão cadastrado.")
+        return
+    print("Cartão:")
+    cartao = _escolher(cartoes)
+
+    projecao = FaturaCartaoService(conn).projecao(cartao.id, meses=12)
+    if not projecao:
+        print("Nenhuma fatura em aberto.")
+        return
+
+    for fatura in projecao:
+        print(
+            f"{fatura.mes:02d}/{fatura.ano} | {formatar_moeda(fatura.valor_total)} | "
+            f"vence em {fatura.data_vencimento} | {ROTULOS_STATUS_FATURA[fatura.status]}"
+        )
+
+
+def pagar_fatura_cartao(conn: sqlite3.Connection) -> None:
+    cartoes = CartaoService(conn).listar()
+    if not cartoes:
+        print("Nenhum cartão cadastrado.")
+        return
+    print("Cartão:")
+    cartao = _escolher(cartoes)
+
+    mes_texto = input("Mês da fatura [1-12]: ").strip()
+    ano_texto = input("Ano da fatura: ").strip()
+    try:
+        mes = int(mes_texto)
+        ano = int(ano_texto)
+    except ValueError:
+        print("Mês/ano inválido.")
+        return
+
+    try:
+        FaturaCartaoService(conn).pagar_fatura(cartao.id, mes, ano)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Fatura {mes:02d}/{ano} do cartão {cartao.nome} paga.")
+
+
 def main() -> None:
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -378,6 +514,10 @@ def main() -> None:
         "7": ("Gerar relatório do mês (PDF)", gerar_relatorio_do_mes),
         "8": ("Nova recorrência", nova_recorrencia),
         "9": ("Listar recorrências", listar_recorrencias),
+        "10": ("Novo cartão", novo_cartao),
+        "11": ("Registrar compra no cartão", registrar_compra_cartao),
+        "12": ("Ver faturas do cartão", ver_faturas_cartao),
+        "13": ("Pagar fatura do cartão", pagar_fatura_cartao),
     }
 
     try:

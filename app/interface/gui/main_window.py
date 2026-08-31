@@ -2,6 +2,7 @@ import sqlite3
 
 from PySide6.QtWidgets import QHBoxLayout, QListWidget, QMainWindow, QStackedWidget, QWidget
 
+from app.interface.gui.cartao_page import CartaoPage
 from app.interface.gui.dashboard_page import DashboardPage
 from app.interface.gui.historico_page import HistoricoPage
 from app.interface.gui.lancamento_page import LancamentoPage
@@ -23,7 +24,15 @@ class MainWindow(QMainWindow):
         self.menu_lateral = QListWidget()
         self.menu_lateral.setFixedWidth(180)
         self.menu_lateral.addItems(
-            ["Dashboard", "Novo lançamento", "Histórico", "Orçamento", "Relatório", "Recorrências"]
+            [
+                "Dashboard",
+                "Novo lançamento",
+                "Histórico",
+                "Orçamento",
+                "Relatório",
+                "Recorrências",
+                "Cartão de crédito",
+            ]
         )
         self.menu_lateral.currentRowChanged.connect(self._trocar_pagina)
         layout.addWidget(self.menu_lateral)
@@ -35,6 +44,7 @@ class MainWindow(QMainWindow):
         self.pagina_orcamento = OrcamentoPage(conn)
         self.pagina_relatorio = RelatorioPage(conn)
         self.pagina_recorrencia = RecorrenciaPage(conn)
+        self.pagina_cartao = CartaoPage(conn)
 
         for pagina in (
             self.pagina_dashboard,
@@ -43,6 +53,7 @@ class MainWindow(QMainWindow):
             self.pagina_orcamento,
             self.pagina_relatorio,
             self.pagina_recorrencia,
+            self.pagina_cartao,
         ):
             self.paginas.addWidget(pagina)
 

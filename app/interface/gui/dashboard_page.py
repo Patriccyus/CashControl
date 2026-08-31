@@ -8,6 +8,7 @@ from app.analytics.dashboard_analytics import (
     entradas_saidas_por_mes,
     gastos_por_categoria_do_mes,
 )
+from app.analytics.fatura_cartao import total_despesas_futuras_cartoes
 from app.analytics.orcamento_analytics import calcular_consumo_orcamento
 from app.interface.gui.mpl_canvas import MplCanvas
 from app.utils.money import centavos_para_reais, formatar_moeda
@@ -51,6 +52,7 @@ class DashboardPage(QWidget):
         self.cartao_resultado = _CartaoIndicador("Resultado do mês")
         self.cartao_pendentes = _CartaoIndicador("Contas pendentes")
         self.cartao_renda_comprometida = _CartaoIndicador("% da renda comprometida")
+        self.cartao_despesas_futuras = _CartaoIndicador("Despesas futuras (cartão)")
         for cartao in (
             self.cartao_saldo,
             self.cartao_entradas,
@@ -58,6 +60,7 @@ class DashboardPage(QWidget):
             self.cartao_resultado,
             self.cartao_pendentes,
             self.cartao_renda_comprometida,
+            self.cartao_despesas_futuras,
         ):
             cartoes_layout.addWidget(cartao)
         layout_principal.addLayout(cartoes_layout)
@@ -90,6 +93,9 @@ class DashboardPage(QWidget):
             f"{resumo.quantidade_pendentes} ({formatar_moeda(resumo.valor_pendente)})"
         )
         self.cartao_renda_comprometida.definir_valor(f"{resumo.percentual_renda_comprometida:.0f}%")
+        self.cartao_despesas_futuras.definir_valor(
+            formatar_moeda(total_despesas_futuras_cartoes(self.conn))
+        )
 
     def _atualizar_grafico_entradas_saidas(self) -> None:
         eixo = self.canvas_entradas_saidas.limpar()

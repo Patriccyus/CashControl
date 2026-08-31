@@ -22,12 +22,13 @@ pytest                # roda os testes
 - `app/analytics` — indicadores do dashboard, consumo de orçamento, insights e relatório mensal
 - `app/reports` — geração do relatório mensal em PDF
 - `app/interface/cli.py` — interface de linha de comando
-- `app/interface/gui` — interface gráfica em PySide6 (dashboard, lançamento, histórico, orçamento, relatório)
+- `app/interface/gui` — interface gráfica em PySide6 (dashboard, lançamento, histórico, orçamento, relatório, recorrências)
 
 ## Status
 
 Fase 1 (planejamento), Fase 2 (banco de dados), Fase 3 (cadastro), Fase 4
 (consultas: histórico com filtros), Fase 5 (orçamento), Fase 6 (dashboard
-gráfico em PySide6) e Fase 7 (relatório mensal em PDF, com insights por
-regras determinísticas) concluídas. Próxima etapa: Fase 8 — despesas
-recorrentes.
+gráfico em PySide6), Fase 7 (relatório mensal em PDF, com insights por
+regras determinísticas) e Fase 8 (despesas e receitas recorrentes, com
+geração automática de lançamentos pendentes ao abrir o app) concluídas.
+Próxima etapa: Fase 9 — cartão de crédito.

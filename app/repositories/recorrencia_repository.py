@@ -11,15 +11,20 @@ class RecorrenciaRepository:
     def create(self, recorrencia: Recorrencia) -> int:
         cursor = self.conn.execute(
             """
-            INSERT INTO recorrencias (descricao, valor, categoria_id, frequencia, proxima_data, ativo)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO recorrencias (
+                descricao, valor, categoria_id, conta_id, forma_pagamento_id,
+                frequencia, proxima_data, data_fim, ativo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 recorrencia.descricao,
                 recorrencia.valor,
                 recorrencia.categoria_id,
+                recorrencia.conta_id,
+                recorrencia.forma_pagamento_id,
                 recorrencia.frequencia,
                 recorrencia.proxima_data,
+                recorrencia.data_fim,
                 int(recorrencia.ativo),
             ),
         )
@@ -44,16 +49,20 @@ class RecorrenciaRepository:
         self.conn.execute(
             """
             UPDATE recorrencias SET
-                descricao = ?, valor = ?, categoria_id = ?, frequencia = ?,
-                proxima_data = ?, ativo = ?
+                descricao = ?, valor = ?, categoria_id = ?, conta_id = ?,
+                forma_pagamento_id = ?, frequencia = ?, proxima_data = ?,
+                data_fim = ?, ativo = ?
             WHERE id = ?
             """,
             (
                 recorrencia.descricao,
                 recorrencia.valor,
                 recorrencia.categoria_id,
+                recorrencia.conta_id,
+                recorrencia.forma_pagamento_id,
                 recorrencia.frequencia,
                 recorrencia.proxima_data,
+                recorrencia.data_fim,
                 int(recorrencia.ativo),
                 recorrencia.id,
             ),
@@ -71,7 +80,10 @@ class RecorrenciaRepository:
             descricao=row["descricao"],
             valor=row["valor"],
             categoria_id=row["categoria_id"],
+            conta_id=row["conta_id"],
+            forma_pagamento_id=row["forma_pagamento_id"],
             frequencia=row["frequencia"],
             proxima_data=row["proxima_data"],
+            data_fim=row["data_fim"],
             ativo=bool(row["ativo"]),
         )

@@ -59,10 +59,15 @@ CREATE TABLE IF NOT EXISTS recorrencias (
     descricao TEXT NOT NULL,
     valor INTEGER NOT NULL CHECK (valor > 0),
     categoria_id INTEGER NOT NULL,
+    conta_id INTEGER NOT NULL,
+    forma_pagamento_id INTEGER NOT NULL,
     frequencia TEXT NOT NULL CHECK (frequencia IN ('diaria', 'semanal', 'mensal', 'anual')),
     proxima_data TEXT NOT NULL,
+    data_fim TEXT,
     ativo INTEGER NOT NULL DEFAULT 1,
-    FOREIGN KEY (categoria_id) REFERENCES categorias (id)
+    FOREIGN KEY (categoria_id) REFERENCES categorias (id),
+    FOREIGN KEY (conta_id) REFERENCES contas (id),
+    FOREIGN KEY (forma_pagamento_id) REFERENCES formas_pagamento (id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoes (data);

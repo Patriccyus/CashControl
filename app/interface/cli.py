@@ -16,6 +16,7 @@ from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
 from app.services.exceptions import ErroValidacao
 from app.services.movimentacao_service import MovimentacaoService
 from app.services.orcamento_service import OrcamentoService
+from app.services.recorrencia_service import FREQUENCIAS_VALIDAS, RecorrenciaService
 from app.services.sugestao_categoria import sugerir_categoria
 from app.utils.money import formatar_moeda, reais_para_centavos
 
@@ -282,6 +283,78 @@ def gerar_relatorio_do_mes(conn: sqlite3.Connection) -> None:
     print(f"\nPDF salvo em {caminho}")
 
 
+def nova_recorrencia(conn: sqlite3.Connection) -> None:
+    categorias = CategoriaRepository(conn).list(apenas_ativas=True)
+    if not categorias:
+        print("Nenhuma categoria cadastrada.")
+        return
+    print("Categoria:")
+    categoria = _escolher(categorias)
+
+    contas = ContaRepository(conn).list()
+    if not contas:
+        print("Nenhuma conta cadastrada.")
+        return
+    print("Conta:")
+    conta = _escolher(contas)
+
+    formas_pagamento = FormaPagamentoRepository(conn).list()
+    if not formas_pagamento:
+        print("Nenhuma forma de pagamento cadastrada.")
+        return
+    print("Forma de pagamento:")
+    forma_pagamento = _escolher(formas_pagamento)
+
+    descricao = input("Descrição: ").strip()
+    valor_texto = input("Valor (ex: 25,90): ").strip()
+    try:
+        valor = reais_para_centavos(valor_texto)
+    except ValueError as exc:
+        print(f"Valor inválido: {exc}")
+        return
+
+    frequencia = ""
+    while frequencia not in FREQUENCIAS_VALIDAS:
+        frequencia = input("Frequência (diaria/semanal/mensal/anual): ").strip().lower()
+
+    data_inicio = input(f"Data de início (Enter para {date.today().isoformat()}): ").strip()
+    data_inicio = data_inicio or date.today().isoformat()
+
+    data_fim = _perguntar_opcional("Data de término (AAAA-MM-DD)")
+
+    try:
+        RecorrenciaService(conn).criar(
+            descricao=descricao,
+            valor=valor,
+            categoria_id=categoria.id,
+            conta_id=conta.id,
+            forma_pagamento_id=forma_pagamento.id,
+            frequencia=frequencia,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+        )
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print(f"Recorrência '{descricao}' cadastrada ({frequencia}, a partir de {data_inicio}).")
+
+
+def listar_recorrencias(conn: sqlite3.Connection) -> None:
+    recorrencias = RecorrenciaService(conn).listar()
+    if not recorrencias:
+        print("Nenhuma recorrência ativa.")
+        return
+    categorias = {c.id: c.nome for c in CategoriaRepository(conn).list(apenas_ativas=False)}
+    for rec in recorrencias:
+        categoria_nome = categorias.get(rec.categoria_id, "?")
+        termino = f" até {rec.data_fim}" if rec.data_fim else ""
+        print(
+            f"#{rec.id} {rec.descricao} | {formatar_moeda(rec.valor)} | {categoria_nome} | "
+            f"{rec.frequencia} | próxima: {rec.proxima_data}{termino}"
+        )
+
+
 def main() -> None:
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
@@ -291,6 +364,10 @@ def main() -> None:
     conn = get_connection()
     seed_dados_iniciais(conn)
 
+    total_gerado = RecorrenciaService(conn).gerar_lancamentos_pendentes()
+    if total_gerado:
+        print(f"{total_gerado} lançamento(s) recorrente(s) gerado(s) automaticamente (status pendente).")
+
     menu = {
         "1": ("Novo lançamento", novo_lancamento),
         "2": ("Listar movimentações", listar_movimentacoes),
@@ -299,6 +376,8 @@ def main() -> None:
         "5": ("Definir orçamento", definir_orcamento),
         "6": ("Ver orçamento do mês", ver_orcamento_do_mes),
         "7": ("Gerar relatório do mês (PDF)", gerar_relatorio_do_mes),
+        "8": ("Nova recorrência", nova_recorrencia),
+        "9": ("Listar recorrências", listar_recorrencias),
     }
 
     try:

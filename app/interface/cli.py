@@ -28,10 +28,11 @@ from app.services.perfil_service import DB_LEGADO_PADRAO, PERFIS_DIR_PADRAO, Per
 from app.services.recorrencia_service import FREQUENCIAS_VALIDAS, RecorrenciaService
 from app.services.sugestao_categoria import sugerir_categoria
 from app.utils.money import formatar_moeda, reais_para_centavos
+from app.utils.paths import base_dir
 
 T = TypeVar("T")
 
-PASTA_RELATORIOS = Path(__file__).resolve().parents[2] / "reports"
+PASTA_RELATORIOS = base_dir() / "reports"
 
 ROTULOS_SITUACAO = {
     "dentro": "dentro do limite",

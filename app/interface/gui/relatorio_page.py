@@ -1,14 +1,14 @@
 import sqlite3
 from datetime import date
-from pathlib import Path
 
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSpinBox, QTextEdit, QVBoxLayout, QWidget
 
 from app.analytics.relatorio_mensal import gerar_relatorio_mensal
 from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
 from app.utils.money import formatar_moeda
+from app.utils.paths import base_dir
 
-PASTA_RELATORIOS = Path(__file__).resolve().parents[3] / "reports"
+PASTA_RELATORIOS = base_dir() / "reports"
 
 NOMES_MESES = [
     "",

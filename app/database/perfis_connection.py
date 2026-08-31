@@ -1,7 +1,9 @@
 import sqlite3
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[2]
+from app.utils.paths import base_dir
+
+BASE_DIR = base_dir()
 PERFIS_DB_PATH = BASE_DIR / "data" / "perfis.db"
 
 SCHEMA_PERFIS = """

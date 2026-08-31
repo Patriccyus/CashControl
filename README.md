@@ -49,9 +49,13 @@ Também foram adicionadas, além do roadmap original: uma tela de cadastro
 de contas (banco, poupança, carteira digital etc.), que já existia como
 serviço desde a Fase 3 mas não tinha interface própria; edição/exclusão
 de movimentações no Histórico (GUI) e via novas opções na CLI, incluindo
-a confirmação antes de excluir pedida na seção 6 do documento; e login
-com múltiplos perfis, cada um com seu próprio banco de dados isolado
-(o documento original listava "múltiplos usuários" como fora do escopo
-do MVP — essa é uma extensão pedida depois que o núcleo já estava pronto).
+a confirmação antes de excluir pedida na seção 6 do documento; login com
+múltiplos perfis, cada um com seu próprio banco de dados isolado (o
+documento original listava "múltiplos usuários" como fora do escopo do
+MVP — essa é uma extensão pedida depois que o núcleo já estava pronto);
+e backup (seção 20 — estava na lista do MVP 1.0 mas nunca tinha sido
+implementado): backup manual e automático (uma vez por dia, ao abrir o
+app), restauração e exportação de movimentações em CSV, em `app/services/backup_service.py`
+e na aba "Backup" da GUI / opções 18–21 da CLI.
 
 Próxima etapa: Fase 10 — empacotamento e instalador Windows.

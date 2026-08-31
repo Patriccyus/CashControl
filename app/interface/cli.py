@@ -1,6 +1,6 @@
 import sqlite3
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional, TypeVar
 
@@ -15,6 +15,7 @@ from app.repositories.conta_repository import ContaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
 from app.reports.relatorio_pdf import gerar_pdf_relatorio_mensal
+from app.services.backup_service import BackupService
 from app.services.cartao_service import CartaoService
 from app.services.compra_cartao_service import CompraCartaoService
 from app.services.conta_service import TIPOS_VALIDOS as TIPOS_CONTA_VALIDOS
@@ -615,6 +616,71 @@ def listar_contas(conn: sqlite3.Connection) -> None:
         print(f"#{conta.id} {conta.nome} | {conta.tipo} | saldo inicial: {formatar_moeda(conta.saldo_inicial)}")
 
 
+def _backup_service_para(caminho_banco: Path) -> BackupService:
+    return BackupService(caminho_banco, caminho_banco.parent / "backups" / caminho_banco.stem)
+
+
+def criar_backup_cli(conn: sqlite3.Connection, caminho_banco: Path) -> None:
+    service = _backup_service_para(caminho_banco)
+    try:
+        caminho = service.criar_backup()
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+    print(f"Backup criado em {caminho}")
+
+
+def listar_backups_cli(conn: sqlite3.Connection, caminho_banco: Path) -> None:
+    backups = _backup_service_para(caminho_banco).listar_backups()
+    if not backups:
+        print("Nenhum backup encontrado.")
+        return
+    for indice, caminho in enumerate(backups, start=1):
+        data_criacao = datetime.fromtimestamp(caminho.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
+        print(f"  {indice}. {caminho.name} — {data_criacao}")
+
+
+def restaurar_backup_cli(conn: sqlite3.Connection, caminho_banco: Path) -> None:
+    service = _backup_service_para(caminho_banco)
+    backups = service.listar_backups()
+    if not backups:
+        print("Nenhum backup encontrado.")
+        return
+
+    print("Backups disponíveis:")
+    for indice, caminho in enumerate(backups, start=1):
+        print(f"  {indice}. {caminho.name}")
+    escolha = input("Escolha o número do backup a restaurar: ").strip()
+    if not escolha.isdigit() or not (1 <= int(escolha) <= len(backups)):
+        print("Opção inválida.")
+        return
+
+    confirmar = input(
+        "Confirma restauração? Os dados atuais deste perfil serão substituídos. [s/N]: "
+    ).strip().lower()
+    if confirmar != "s":
+        print("Cancelado.")
+        return
+
+    try:
+        service.restaurar_backup(backups[int(escolha) - 1], conn)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print("Dados restaurados. Encerrando o programa — abra novamente para continuar.")
+    sys.exit(0)
+
+
+def exportar_csv_cli(conn: sqlite3.Connection, caminho_banco: Path) -> None:
+    caminho_padrao = Path.home() / "movimentacoes.csv"
+    caminho_texto = input(f"Caminho do arquivo CSV (Enter para {caminho_padrao}): ").strip()
+    caminho_destino = Path(caminho_texto) if caminho_texto else caminho_padrao
+
+    caminho = _backup_service_para(caminho_banco).exportar_csv(conn, caminho_destino)
+    print(f"Movimentações exportadas para {caminho}")
+
+
 def _login_cli(
     perfis_conn: sqlite3.Connection,
     perfis_dir: Path = PERFIS_DIR_PADRAO,
@@ -672,6 +738,11 @@ def main() -> None:
 
     print(f"\nBem-vindo(a), {perfil.nome}!")
 
+    backup_service = _backup_service_para(caminho_banco)
+    if not backup_service.ja_existe_backup_hoje():
+        backup_service.criar_backup()
+        print("Backup automático do dia criado.")
+
     total_gerado = RecorrenciaService(conn).gerar_lancamentos_pendentes()
     if total_gerado:
         print(f"{total_gerado} lançamento(s) recorrente(s) gerado(s) automaticamente (status pendente).")
@@ -694,6 +765,10 @@ def main() -> None:
         "15": ("Listar contas", listar_contas),
         "16": ("Editar movimentação", editar_movimentacao),
         "17": ("Excluir movimentação", excluir_movimentacao),
+        "18": ("Criar backup agora", lambda c: criar_backup_cli(c, caminho_banco)),
+        "19": ("Listar backups", lambda c: listar_backups_cli(c, caminho_banco)),
+        "20": ("Restaurar backup", lambda c: restaurar_backup_cli(c, caminho_banco)),
+        "21": ("Exportar movimentações (CSV)", lambda c: exportar_csv_cli(c, caminho_banco)),
     }
 
     try:

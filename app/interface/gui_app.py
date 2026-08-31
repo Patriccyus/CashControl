@@ -7,6 +7,7 @@ from app.database.perfis_connection import get_perfis_connection
 from app.database.seed import seed_dados_iniciais
 from app.interface.gui.login_window import LoginWindow
 from app.interface.gui.main_window import MainWindow
+from app.services.backup_service import BackupService
 from app.services.perfil_service import PerfilService
 from app.services.recorrencia_service import RecorrenciaService
 
@@ -29,9 +30,13 @@ def main() -> None:
     conn = get_connection(caminho_banco)
     seed_dados_iniciais(conn)
 
+    backup_service = BackupService(caminho_banco, caminho_banco.parent / "backups" / caminho_banco.stem)
+    if not backup_service.ja_existe_backup_hoje():
+        backup_service.criar_backup()
+
     total_gerado = RecorrenciaService(conn).gerar_lancamentos_pendentes()
 
-    janela = MainWindow(conn)
+    janela = MainWindow(conn, caminho_banco)
     janela.setWindowTitle(f"Controle Financeiro — {login.perfil_autenticado.nome}")
     janela.show()
 

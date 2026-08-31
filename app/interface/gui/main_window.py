@@ -1,7 +1,9 @@
 import sqlite3
+from pathlib import Path
 
 from PySide6.QtWidgets import QHBoxLayout, QListWidget, QMainWindow, QStackedWidget, QWidget
 
+from app.interface.gui.backup_page import BackupPage
 from app.interface.gui.cartao_page import CartaoPage
 from app.interface.gui.conta_page import ContaPage
 from app.interface.gui.dashboard_page import DashboardPage
@@ -13,7 +15,7 @@ from app.interface.gui.relatorio_page import RelatorioPage
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, caminho_banco: Path):
         super().__init__()
         self.conn = conn
         self.setWindowTitle("Controle Financeiro")
@@ -34,6 +36,7 @@ class MainWindow(QMainWindow):
                 "Recorrências",
                 "Cartão de crédito",
                 "Contas",
+                "Backup",
             ]
         )
         self.menu_lateral.currentRowChanged.connect(self._trocar_pagina)
@@ -48,6 +51,7 @@ class MainWindow(QMainWindow):
         self.pagina_recorrencia = RecorrenciaPage(conn)
         self.pagina_cartao = CartaoPage(conn)
         self.pagina_conta = ContaPage(conn)
+        self.pagina_backup = BackupPage(conn, caminho_banco)
 
         for pagina in (
             self.pagina_dashboard,
@@ -58,6 +62,7 @@ class MainWindow(QMainWindow):
             self.pagina_recorrencia,
             self.pagina_cartao,
             self.pagina_conta,
+            self.pagina_backup,
         ):
             self.paginas.addWidget(pagina)
 

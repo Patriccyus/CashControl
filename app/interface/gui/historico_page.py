@@ -3,10 +3,12 @@ import sqlite3
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -15,18 +17,22 @@ from PySide6.QtWidgets import (
 )
 
 from app.interface.gui.combos import preencher_combo_contas
+from app.interface.gui.editar_movimentacao_dialog import EditarMovimentacaoDialog
 from app.repositories.categoria_repository import CategoriaRepository
 from app.repositories.forma_pagamento_repository import FormaPagamentoRepository
 from app.repositories.movimentacao_repository import FiltroMovimentacao, MovimentacaoRepository
+from app.services.exceptions import ErroValidacao
+from app.services.movimentacao_service import MovimentacaoService
 from app.utils.money import formatar_moeda
 
-COLUNAS = ["Data", "Tipo", "Valor", "Categoria", "Forma de pagamento", "Status", "Descrição"]
+COLUNAS = ["Data", "Tipo", "Valor", "Categoria", "Forma de pagamento", "Status", "Descrição", "Ações"]
 
 
 class HistoricoPage(QWidget):
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, ao_alterar=None):
         super().__init__()
         self.conn = conn
+        self._ao_alterar = ao_alterar
 
         layout = QVBoxLayout(self)
 
@@ -147,3 +153,52 @@ class HistoricoPage(QWidget):
                 item = QTableWidgetItem(texto)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.tabela.setItem(linha, coluna, item)
+
+            self.tabela.setCellWidget(linha, len(valores), self._criar_botoes_acao(mov.id))
+
+    def _criar_botoes_acao(self, movimentacao_id: int) -> QWidget:
+        container = QWidget()
+        layout_botoes = QHBoxLayout(container)
+        layout_botoes.setContentsMargins(0, 0, 0, 0)
+
+        botao_editar = QPushButton("Editar")
+        botao_editar.clicked.connect(lambda _checked=False, mid=movimentacao_id: self._editar(mid))
+        layout_botoes.addWidget(botao_editar)
+
+        botao_excluir = QPushButton("Excluir")
+        botao_excluir.clicked.connect(lambda _checked=False, mid=movimentacao_id: self._excluir(mid))
+        layout_botoes.addWidget(botao_excluir)
+
+        return container
+
+    def _editar(self, movimentacao_id: int) -> None:
+        movimentacao = MovimentacaoRepository(self.conn).get_by_id(movimentacao_id)
+        if movimentacao is None:
+            return
+
+        dialogo = EditarMovimentacaoDialog(self.conn, movimentacao, parent=self)
+        if dialogo.exec() == QDialog.DialogCode.Accepted:
+            self.atualizar()
+            if self._ao_alterar:
+                self._ao_alterar()
+
+    def _excluir(self, movimentacao_id: int) -> None:
+        resposta = QMessageBox.question(
+            self,
+            "Excluir movimentação",
+            "Tem certeza que deseja excluir esta movimentação? Essa ação não pode ser desfeita.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if resposta != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            MovimentacaoService(self.conn).excluir(movimentacao_id)
+        except ErroValidacao as exc:
+            QMessageBox.warning(self, "Erro", str(exc))
+            return
+
+        self.atualizar()
+        if self._ao_alterar:
+            self._ao_alterar()

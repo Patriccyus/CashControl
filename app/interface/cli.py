@@ -79,7 +79,10 @@ def _imprimir_movimentacoes(conn: sqlite3.Connection, movimentacoes: list) -> No
     for mov in movimentacoes:
         sinal = "+" if mov.tipo == "entrada" else "-"
         categoria_nome = categorias.get(mov.categoria_id, "?")
-        print(f"{mov.data} | {sinal}{formatar_moeda(mov.valor)} | {categoria_nome} | {mov.status} | {mov.descricao}")
+        print(
+            f"#{mov.id} {mov.data} | {sinal}{formatar_moeda(mov.valor)} | {categoria_nome} | "
+            f"{mov.status} | {mov.descricao}"
+        )
 
 
 def novo_lancamento(conn: sqlite3.Connection) -> None:
@@ -493,6 +496,85 @@ def pagar_fatura_cartao(conn: sqlite3.Connection) -> None:
     print(f"Fatura {mes:02d}/{ano} do cartão {cartao.nome} paga.")
 
 
+def editar_movimentacao(conn: sqlite3.Connection) -> None:
+    id_texto = input("ID da movimentação a editar (veja em 'Listar movimentações'): ").strip()
+    if not id_texto.isdigit():
+        print("ID inválido.")
+        return
+
+    movimentacao = MovimentacaoRepository(conn).get_by_id(int(id_texto))
+    if movimentacao is None:
+        print("Movimentação não encontrada.")
+        return
+
+    print(f"Editando #{movimentacao.id}: {movimentacao.descricao} ({formatar_moeda(movimentacao.valor)})")
+
+    valor_texto = input(f"Novo valor (Enter para manter {formatar_moeda(movimentacao.valor)}): ").strip()
+    if valor_texto:
+        try:
+            movimentacao.valor = reais_para_centavos(valor_texto)
+        except ValueError as exc:
+            print(f"Valor inválido: {exc}")
+            return
+
+    descricao = input(f"Nova descrição (Enter para manter '{movimentacao.descricao}'): ").strip()
+    if descricao:
+        movimentacao.descricao = descricao
+
+    categoria_atual = CategoriaRepository(conn).get_by_id(movimentacao.categoria_id)
+    nome_categoria_atual = categoria_atual.nome if categoria_atual else "?"
+    if input(f"Trocar categoria (atual: {nome_categoria_atual})? [s/N]: ").strip().lower() == "s":
+        categorias = CategoriaRepository(conn).list(tipo=movimentacao.tipo)
+        print("Nova categoria:")
+        movimentacao.categoria_id = _escolher(categorias).id
+
+    status_texto = input(
+        f"Novo status (pago/pendente, Enter para manter '{movimentacao.status}'): "
+    ).strip().lower()
+    if status_texto:
+        if status_texto not in ("pago", "pendente"):
+            print("Status inválido.")
+            return
+        movimentacao.status = status_texto
+
+    try:
+        MovimentacaoService(conn).atualizar(movimentacao)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print("Movimentação atualizada com sucesso.")
+
+
+def excluir_movimentacao(conn: sqlite3.Connection) -> None:
+    id_texto = input("ID da movimentação a excluir (veja em 'Listar movimentações'): ").strip()
+    if not id_texto.isdigit():
+        print("ID inválido.")
+        return
+
+    movimentacao_id = int(id_texto)
+    movimentacao = MovimentacaoRepository(conn).get_by_id(movimentacao_id)
+    if movimentacao is None:
+        print("Movimentação não encontrada.")
+        return
+
+    confirmar = input(
+        f"Confirma exclusão de #{movimentacao.id} '{movimentacao.descricao}' "
+        f"({formatar_moeda(movimentacao.valor)})? [s/N]: "
+    ).strip().lower()
+    if confirmar != "s":
+        print("Cancelado.")
+        return
+
+    try:
+        MovimentacaoService(conn).excluir(movimentacao_id)
+    except ErroValidacao as exc:
+        print(f"Erro: {exc}")
+        return
+
+    print("Movimentação excluída.")
+
+
 def nova_conta(conn: sqlite3.Connection) -> None:
     nome = input("Nome da conta (ex: Banco Bradesco): ").strip()
 
@@ -560,6 +642,8 @@ def main() -> None:
         "13": ("Pagar fatura do cartão", pagar_fatura_cartao),
         "14": ("Nova conta", nova_conta),
         "15": ("Listar contas", listar_contas),
+        "16": ("Editar movimentação", editar_movimentacao),
+        "17": ("Excluir movimentação", excluir_movimentacao),
     }
 
     try:

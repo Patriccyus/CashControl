@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         self.paginas = QStackedWidget()
         self.pagina_dashboard = DashboardPage(conn)
         self.pagina_lancamento = LancamentoPage(conn, ao_salvar=self._apos_novo_lancamento)
-        self.pagina_historico = HistoricoPage(conn)
+        self.pagina_historico = HistoricoPage(conn, ao_alterar=self._apos_novo_lancamento)
         self.pagina_orcamento = OrcamentoPage(conn)
         self.pagina_relatorio = RelatorioPage(conn)
         self.pagina_recorrencia = RecorrenciaPage(conn)

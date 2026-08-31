@@ -33,7 +33,9 @@ regras determinísticas), Fase 8 (despesas e receitas recorrentes, com
 geração automática de lançamentos pendentes ao abrir o app) e Fase 9
 (cartão de crédito: compras parceladas, faturas por fechamento/vencimento,
 pagamento gerando movimentação, projeção de despesas futuras) concluídas.
-Também foi adicionada uma tela de cadastro de contas (banco, poupança,
+Também foram adicionadas: uma tela de cadastro de contas (banco, poupança,
 carteira digital etc.), que já existia como serviço desde a Fase 3 mas
-não tinha interface própria. Próxima etapa: Fase 10 — empacotamento e
-instalador Windows.
+não tinha interface própria; e edição/exclusão de movimentações no
+Histórico (GUI) e via novas opções na CLI, incluindo a confirmação antes
+de excluir pedida na seção 6 do documento. Próxima etapa: Fase 10 —
+empacotamento e instalador Windows.

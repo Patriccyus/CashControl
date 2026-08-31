@@ -24,6 +24,30 @@ em si). Ao criar o **primeiro** perfil, se já existir o banco antigo
 ele é copiado automaticamente para virar os dados desse perfil — o
 arquivo antigo não é apagado, fica como estava.
 
+## Gerar o executável e o instalador
+
+```bash
+pip install pyinstaller
+pyinstaller ControleFinanceiro.spec       # gera dist\ControleFinanceiro.exe (~80 MB, arquivo único)
+```
+
+O `.exe` gerado não precisa de Python instalado na máquina de destino.
+Ele cria sua própria pasta `data/` (bancos de dados) e `reports/` (PDFs)
+ao lado de onde estiver — pode ser copiado e rodado de qualquer lugar.
+
+Para gerar um instalador de verdade (atalhos no Menu Iniciar e Desktop,
+desinstalador):
+
+```bash
+pyinstaller ControleFinanceiro.spec
+# instale o Inno Setup (https://jrsoftware.org/isinfo.php), depois:
+iscc installer\ControleFinanceiro.iss
+```
+
+O instalador final fica em `installer\output\ControleFinanceiro_Setup.exe`.
+Instala por usuário (sem precisar de admin), porque o app grava seus
+próprios dados dentro da pasta de instalação.
+
 ## Estrutura
 
 - `app/database` — conexão, schema e seed do SQLite (dados financeiros) e do registro de perfis
@@ -58,4 +82,13 @@ implementado): backup manual e automático (uma vez por dia, ao abrir o
 app), restauração e exportação de movimentações em CSV, em `app/services/backup_service.py`
 e na aba "Backup" da GUI / opções 18–21 da CLI.
 
-Próxima etapa: Fase 10 — empacotamento e instalador Windows.
+Fase 10 (empacotamento e instalador) concluída: `ControleFinanceiro.spec`
+gera um `.exe` único via PyInstaller (testado — abre, cria perfil, mostra
+o dashboard com os gráficos e não precisa de Python instalado), e
+`installer/ControleFinanceiro.iss` é o script do Inno Setup para gerar
+um instalador com atalhos e desinstalador (não compilado neste ambiente
+por não ter o Inno Setup instalado — ver instruções acima). "Atualização"
+automática, também listada na Fase 10, ficou de fora: exigiria um servidor
+de releases, fora do escopo de um app local.
+
+Roadmap original completo (Fases 1–10) e as extensões pedidas depois.

@@ -100,6 +100,7 @@ próprios dados dentro da pasta de instalação.
 - `app/reports` — geração do relatório mensal em PDF
 - `app/interface/cli.py` — interface de linha de comando
 - `app/interface/gui` — interface gráfica em PySide6 (login, dashboard, lançamento, histórico, orçamento, relatório, recorrências, cartão de crédito, contas)
+- `tools/gerar_screenshots.py` — cria um banco de demonstração com dados fictícios e regera as imagens do README
 
 ## Status
 

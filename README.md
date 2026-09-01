@@ -128,11 +128,11 @@ e na aba "Backup" da GUI / opções 18–21 da CLI.
 Fase 10 (empacotamento e instalador) concluída: `ControleFinanceiro.spec`
 gera um `.exe` único via PyInstaller (testado — abre, cria perfil, mostra
 o dashboard com os gráficos e não precisa de Python instalado), e
-`installer/ControleFinanceiro.iss` é o script do Inno Setup para gerar
-um instalador com atalhos e desinstalador (não compilado neste ambiente
-por não ter o Inno Setup instalado — ver instruções acima). "Atualização"
-automática, também listada na Fase 10, ficou de fora: exigiria um servidor
-de releases, fora do escopo de um app local.
+`installer/ControleFinanceiro.iss` é o script do Inno Setup que gera o
+instalador com atalhos e desinstalador (compilado com o Inno
+Setup 7.1 — resulta em `ControleFinanceiro_Setup.exe`, ~73 MB).
+"Atualização" automática, também listada na Fase 10, ficou de fora:
+exigiria um servidor de releases, fora do escopo de um app local.
 
 Roadmap original completo (Fases 1–10) e as extensões pedidas depois.
 

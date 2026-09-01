@@ -136,6 +136,31 @@ exigiria um servidor de releases, fora do escopo de um app local.
 
 Roadmap original completo (Fases 1–10) e as extensões pedidas depois.
 
+## Como este projeto foi desenvolvido
+
+Projeto de aprendizado, desenvolvido com apoio de IA como par de programação.
+
+O ponto de partida foi a especificação em
+[projeto_controle_financeiro_python.md](projeto_controle_financeiro_python.md) —
+23 seções definindo escopo, telas, modelo de dados, regras de negócio e as dez
+fases de implementação. Ela veio antes do código, e o desenvolvimento seguiu
+essa ordem.
+
+As decisões de escopo e arquitetura, a validação das regras de negócio e a
+revisão do que foi produzido são minhas. Alguns exemplos do que isso significou
+na prática:
+
+- A separação em camadas (`models` / `repositories` / `services` / `analytics` /
+  `interface`) foi definida na especificação, para o projeto não virar um script
+  monolítico — e é o motivo de a lógica de fatura de cartão ser testável sem
+  abrir uma tela.
+- Valores monetários são inteiros em centavos, nunca `float`, para não acumular
+  erro de arredondamento.
+- A atualização automática, prevista na Fase 10, ficou de fora com justificativa:
+  exigiria um servidor de releases, desproporcional para um aplicativo local.
+- Múltiplos perfis não estavam no MVP; foram acrescentados depois que o núcleo
+  já funcionava, e não antes.
+
 ## Licença
 
 MIT — ver [LICENSE](LICENSE).

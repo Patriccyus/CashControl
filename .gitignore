@@ -10,3 +10,4 @@ reports/*.pdf
 build/
 dist/
 installer/output/
+link.txt

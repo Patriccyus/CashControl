@@ -4,6 +4,48 @@ Aplicação desktop em Python para controle financeiro pessoal. Ver
 [projeto_controle_financeiro_python.md](projeto_controle_financeiro_python.md)
 para a especificação completa.
 
+## Telas
+
+> As imagens abaixo usam um perfil de demonstração com dados fictícios.
+
+### Dashboard
+
+Indicadores do mês, entradas x saídas dos últimos 6 meses, gastos por categoria
+e consumo do orçamento (verde dentro do limite, amarelo próximo, vermelho estourado).
+
+![Dashboard](assets/screenshots/dashboard.png)
+
+### Histórico
+
+Filtros por período, tipo, categoria, conta, forma de pagamento e status, busca
+por texto, e edição/exclusão de cada lançamento.
+
+![Histórico](assets/screenshots/historico.png)
+
+### Orçamento
+
+Limite por categoria, comparação com o realizado e a situação de cada uma.
+
+![Orçamento](assets/screenshots/orcamento.png)
+
+### Cartão de crédito
+
+Compras parceladas distribuídas nas faturas seguintes, com fechamento e
+vencimento próprios, e projeção dos meses futuros.
+
+![Cartão de crédito](assets/screenshots/cartao.png)
+
+### Recorrências
+
+Despesas e receitas fixas, com a próxima data de geração. Ao abrir o app, os
+lançamentos vencidos são criados automaticamente com status pendente.
+
+![Recorrências](assets/screenshots/recorrencias.png)
+
+### Lançamento rápido
+
+![Novo lançamento](assets/screenshots/lancamento.png)
+
 ## Uso
 
 ```bash
@@ -15,7 +57,7 @@ pytest                # roda os testes
 
 ## Perfis
 
-O app abre com uma tela de login. Cada perfil (ex: "Tiago", "Débora") tem
+O app abre com uma tela de login. Cada perfil (ex: "Ana", "João") tem
 senha própria e um banco SQLite totalmente separado dos demais —
 `data/perfis/<nome>.db`. O cadastro de perfis fica num banco à parte,
 `data/perfis.db` (nome, hash da senha com salt via PBKDF2, nunca a senha
@@ -92,3 +134,7 @@ automática, também listada na Fase 10, ficou de fora: exigiria um servidor
 de releases, fora do escopo de um app local.
 
 Roadmap original completo (Fases 1–10) e as extensões pedidas depois.
+
+## Licença
+
+MIT — ver [LICENSE](LICENSE).
